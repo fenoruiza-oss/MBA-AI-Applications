@@ -1,0 +1,2 @@
+{"input":{"annual_revenue_usd":4000000,"revenue_growth_yoy_pct":35,"gross_margin_pct":70,"burn_multiple":2.0,"net_retention_pct":115,"cash_months_remaining":14,"debt_to_revenue_ratio":0.2},"expected":{"passed_screen":false,"reason_codes":["REV_TOO_SMALL"]}}
+{"input":{"annual_revenue_usd":12000000,"revenue_growth_yoy_pct":20,"gross_margin_pct":58,"burn_multiple":1.9,"net_retention_pct":106,"cash_months_remaining":11,"debt_to_revenue_ratio":0.62},"expected":{"passed_screen":true,"borderline":true,"reason_codes":["BORDERLINE_FINANCIAL_PROFILE"]}}
