@@ -13,7 +13,13 @@ The end-to-end workflow is:
 
 2. **Normalize the data**
    - Each target is converted into a structured `CompanyRecord`.
-   - The normalized record includes company identity, product description, customer description, sales motion, financial values, source references, and data-quality flags.
+   - The normalized record includes:
+     - `company_id`, `company_name`, `website`, `headquarters`
+     - `ownership_type`, `industry_category`, `sales_motion`
+     - `product_summary`, `customer_summary`
+     - `annual_revenue_usd`, `revenue_growth_yoy_pct`, `gross_margin_pct`, `burn_multiple`, `net_retention_pct`, `cash_months_remaining`, `debt_to_revenue_ratio`
+     - provenance fields such as `source_financials`, `source_product`, `financial_as_of`, and `financial_provenance`
+     - `data_quality_flags`
    - This step is schema-validated and deterministic.
 
 3. **Compute financial metrics deterministically**
@@ -25,6 +31,10 @@ The end-to-end workflow is:
      - runway health
      - leverage health
      - screening completeness score
+   - The formulas are deterministic and versioned in code. For example:
+     - `growth_efficiency_score = revenue_growth_yoy_pct / burn_multiple`
+     - `screening_completeness_score = present required fields / total required fields`
+     - revenue band is bucketed into `<10M`, `10-25M`, `25-75M`, and `75M+`
    - No agent is used for this step.
 
 4. **Apply deterministic screening thresholds**
@@ -37,6 +47,23 @@ The end-to-end workflow is:
      - net retention
      - leverage
      - completeness
+   - Current hard-fail thresholds in code are:
+     - reject if revenue `< $5M`
+     - reject if growth `< 15%`
+     - reject if gross margin `< 50%`
+     - reject if runway `< 6 months`
+     - reject if burn multiple `> 3.0`
+     - reject if net retention `< 100%`
+     - reject if debt-to-revenue `> 1.0`
+     - reject if completeness `< 0.70`
+   - Current borderline thresholds in code are:
+     - revenue `< $10M`
+     - growth `< 25%`
+     - gross margin `< 60%`
+     - net retention `< 110%`
+     - runway `< 12 months`
+     - debt-to-revenue between `0.75` and `1.0`
+     - completeness `< 0.85`
    - Deterministic reason codes are assigned here, including `REV_TOO_SMALL`, `GROWTH_TOO_LOW`, `MARGIN_TOO_LOW`, `BURN_TOO_HIGH`, `RETENTION_TOO_WEAK`, `RUNWAY_TOO_SHORT`, `LEVERAGE_TOO_HIGH`, `DATA_INCOMPLETE`, and `BORDERLINE_FINANCIAL_PROFILE`.
 
 5. **Route companies**
@@ -87,6 +114,17 @@ The end-to-end workflow is:
    - Results are stored in Supabase in:
      - `targets`
      - `screening_runs`
+   - `targets` stores the normalized company packet as `payload_json`.
+   - `screening_runs` stores:
+     - `report_id`
+     - `company_id`
+     - `run_date`
+     - `final_decision`
+     - `report_path`
+     - `deterministic_json`
+     - `strategic_json`
+     - `final_reason_codes_json`
+     - `report_json`
    - Rejected and advanced companies are both stored with their structured results and report paths.
 
 This architecture keeps the system inspectable: calculations, thresholds, routing, and final workflow state are deterministic, while the agent handles only strategic interpretation.
@@ -173,9 +211,26 @@ Using the current real-company seeded batch as a concrete example:
 
 Estimated tokens per reviewed target:
 
-- Input packet with product summary, customer summary, selected metrics, caution codes, and Salesforce themes: **900 tokens**
+- Input packet with product summary, customer summary, selected metrics, caution codes, Salesforce themes, and instructions: **900 tokens**
 - Structured strategic-fit output: **350 tokens**
 - Total per reviewed target: **1,250 tokens**
+
+Why those estimates are reasonable:
+
+- The **900 input tokens** include:
+  - the target company packet
+  - 6-7 financial fields
+  - deterministic caution codes
+  - Salesforce strategy themes
+  - the strategic-fit instructions
+  - this is materially smaller than the all-agent design because formulas, thresholds, and routing instructions are not being sent to the model
+- The **350 output tokens** include:
+  - `strategic_fit_score`
+  - theme labels
+  - fit rationale
+  - risk list
+  - recommendation
+  - because the output is structured JSON-like data rather than a long memo, it remains relatively compact
 
 Estimated daily total for the actual design:
 
@@ -192,4 +247,4 @@ Comparison:
 - Reduction: **9,750 tokens/day**
 - Approximate reduction: **46.4%**
 
-The current seeded dataset is intentionally broad, so many companies still reach the agent. In a stricter or higher-volume production funnel, the savings from deterministic routing would likely be larger. Even in this class-sized version, the architecture reduces token use by limiting model calls to strategic interpretation instead of the full workflow.
+The current seeded dataset is intentionally broad and strategy-friendly, so many companies still reach the agent. That makes the current example less efficient than a stricter production funnel. In a larger real pipeline, the deterministic screen would likely reject a higher share of companies before any model call. Even in this class-sized version, the architecture still reduces token use by limiting model calls to strategic interpretation instead of the full workflow.
