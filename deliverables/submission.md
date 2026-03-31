@@ -9,11 +9,17 @@ The end-to-end workflow is:
 1. **Ingest target companies**
    - The system loads a target dataset.
    - The default mode uses a curated set of **real companies** such as Zapier, Workato, Intercom, Gong, Talkdesk, Dataiku, Hex, ServiceTitan, and Mews.
-   - In live-enrichment mode, the system fetches official company websites to refresh product-language fields such as `product_summary`.
+   - In live-enrichment mode, the system fetches official company websites to refresh product-language fields such as `product_summary` (`src/ingest/live-enrichment.ts`).
 
 2. **Normalize the data**
    - Each target is converted into a structured `CompanyRecord`.
-   - The normalized record includes company identity, product description, customer description, sales motion, financial values, source references, and data-quality flags.
+   - The normalized record includes:
+     - `company_id`, `company_name`, `website`, `headquarters`
+     - `ownership_type`, `industry_category`, `sales_motion`
+     - `product_summary`, `customer_summary`
+     - `annual_revenue_usd`, `revenue_growth_yoy_pct`, `gross_margin_pct`, `burn_multiple`, `net_retention_pct`, `cash_months_remaining`, `debt_to_revenue_ratio`
+     - provenance fields such as `source_financials`, `source_product`, `financial_as_of`, and `financial_provenance`
+     - `data_quality_flags`
    - This step is schema-validated and deterministic.
 
 3. **Compute financial metrics deterministically**
@@ -25,6 +31,11 @@ The end-to-end workflow is:
      - runway health
      - leverage health
      - screening completeness score
+   - The formulas are deterministic and implemented in `src/screening/metrics.ts`. For example:
+     - `growth_efficiency_score = revenue_growth_yoy_pct / burn_multiple`
+     - `screening_completeness_score = present required fields / total required fields`
+     - revenue band is bucketed into `<10M`, `10-25M`, `25-75M`, and `75M+`
+   - This implementation deliberately uses the financial values already present in the normalized packet; it does not ask the model to derive or reinterpret arithmetic.
    - No agent is used for this step.
 
 4. **Apply deterministic screening thresholds**
@@ -37,6 +48,23 @@ The end-to-end workflow is:
      - net retention
      - leverage
      - completeness
+   - Current hard-fail thresholds in code (`src/screening/thresholds.ts`) are:
+     - reject if revenue `< $5M`
+     - reject if growth `< 15%`
+     - reject if gross margin `< 50%`
+     - reject if runway `< 6 months`
+     - reject if burn multiple `> 3.0`
+     - reject if net retention `< 100%`
+     - reject if debt-to-revenue `> 1.0`
+     - reject if completeness `< 0.70`
+   - Current borderline thresholds in code are:
+     - revenue `< $10M`
+     - growth `< 25%`
+     - gross margin `< 60%`
+     - net retention `< 110%`
+     - runway `< 12 months`
+     - debt-to-revenue between `0.75` and `1.0`
+     - completeness `< 0.85`
    - Deterministic reason codes are assigned here, including `REV_TOO_SMALL`, `GROWTH_TOO_LOW`, `MARGIN_TOO_LOW`, `BURN_TOO_HIGH`, `RETENTION_TOO_WEAK`, `RUNWAY_TOO_SHORT`, `LEVERAGE_TOO_HIGH`, `DATA_INCOMPLETE`, and `BORDERLINE_FINANCIAL_PROFILE`.
 
 5. **Route companies**
@@ -87,9 +115,30 @@ The end-to-end workflow is:
    - Results are stored in Supabase in:
      - `targets`
      - `screening_runs`
+   - `targets` stores the normalized target packet as `payload_json`.
+   - `screening_runs` stores:
+     - `report_id`
+     - `company_id`
+     - `run_date`
+     - `final_decision`
+     - `report_path`
+     - `deterministic_json`
+     - `strategic_json`
+     - `final_reason_codes_json`
+     - `report_json`
    - Rejected and advanced companies are both stored with their structured results and report paths.
 
 This architecture keeps the system inspectable: calculations, thresholds, routing, and final workflow state are deterministic, while the agent handles only strategic interpretation.
+
+Simple pipeline view:
+
+```text
+Targets -> Normalize -> Metrics -> Thresholds -> Router
+                                               |     
+                                      [fail]   |   [pass]
+                                        |      v
+                                      Reject  Agent -> Decision -> Report -> Store
+```
 
 ## 2. Task Classification: Rule-Based vs Agent-Based
 
@@ -109,19 +158,68 @@ This architecture keeps the system inspectable: calculations, thresholds, routin
 | Map structured agent output into final strategic reason codes | Rule-based | The model should not directly control workflow state. |
 | Store decisions and reports in Supabase | Rule-based | Persistence is execution logic, not agent reasoning. |
 
+### Detailed Task-by-Task Justification
+
+**Load company targets**
+This is rule-based because the system is simply loading known target records from a dataset. An agent would add no reasoning value here and would only introduce variability into a deterministic data-loading step.
+
+**Normalize company records into a fixed schema**
+Normalization is rule-based because the input must map into a strict `CompanyRecord` structure. Using an agent for schema conversion would be risky because inconsistent field mapping would undermine every downstream metric and threshold check.
+
+**Compute financial metrics**
+This is rule-based because the metrics in `src/screening/metrics.ts` are arithmetic. An agent would be wasteful here: code computes them in milliseconds, while an LLM would consume tokens and could miscalculate.
+
+**Apply screening thresholds**
+This is rule-based because the pass, borderline, and fail logic is explicitly defined in `src/screening/thresholds.ts`. If the agent handled thresholding, identical financial inputs could yield inconsistent outcomes across runs.
+
+**Assign deterministic reason codes**
+This is rule-based because reason codes must be stable and auditable. An agent would be risky because it might produce slightly different labels or phrasings for the same underlying failure.
+
+**Route companies to reject vs agent review**
+This is rule-based because routing is workflow control, not interpretation. Letting the agent decide whether it should even be invoked would remove one of the main cost-control levers in the architecture.
+
+**Build the strategic-fit input packet**
+This is rule-based because the model should receive a controlled, minimal packet. Deterministic input construction prevents prompt sprawl and keeps the agent boundary narrow.
+
+**Assess strategic adjacency to Salesforce**
+This is agent-based because deterministic rules are insufficient to map open-ended product descriptions to Salesforce’s five strategic themes. Probabilistic reasoning adds value because the model can judge semantic similarity and strategic complementarity across free text.
+
+**Evaluate product-surface synergy**
+This is agent-based because there is not a simple formula for whether a target strengthens Salesforce’s AI product surface. The model can synthesize product summaries, buyer context, and platform fit in a way deterministic rules would struggle to generalize.
+
+**Evaluate Salesforce distribution fit**
+This is agent-based because GTM fit depends on qualitative interpretation of sales motion, customer type, and adjacency to Salesforce channels. Deterministic keywords would be brittle and likely overfit to a narrow set of examples.
+
+**Identify narrative risks and strategic concerns**
+This is agent-based because risk identification is interpretive and contextual. The model adds value by surfacing plausible issues such as weak adjacency or integration complexity in a structured but non-formulaic way.
+
+**Map structured agent output into final strategic reason codes**
+This is rule-based because the model should not directly control final workflow state. Deterministic mapping ensures that the same strategic output always produces the same final codes.
+
+**Store decisions and reports in Supabase**
+This is rule-based because storage is an execution task. An agent would add no useful reasoning and would only create unnecessary latency and cost.
+
 ## 3. Why All Tasks Were Not Assigned to the Agent
 
-All tasks were not assigned to the agent because that would make the system more expensive, less auditable, and less reliable.
+### Risks of Full Agent Control
 
-First, financial screening is fundamentally deterministic. Revenue, growth, margin, burn multiple, runway, and retention can be computed or checked directly in code. Sending those steps to an LLM would add token cost without improving the result.
+If the model were responsible for calculations, thresholds, routing, and strategic fit, one faulty output could distort the entire workflow. A single mistake in revenue growth, burn multiple, or retention would propagate into screening, reason codes, and final recommendation.
 
-Second, this is an M&A workflow, so auditability matters. Corporate development teams need to explain why a target was rejected or advanced. Deterministic formulas and explicit threshold rules make that possible. If an agent handled calculations, routing, and reason-code assignment, the workflow would be harder to defend and inspect.
+### Cost Implications
 
-Third, keeping calculations and routing deterministic reduces error propagation. In an all-agent system, one model mistake could affect arithmetic, screening, strategic interpretation, and final status at once. In this architecture, the agent can influence only the strategic-fit layer.
+Sending every task to the model would roughly double daily token usage relative to the current design. The deterministic layer removes the need to spend model tokens on arithmetic, threshold checks, and storage-oriented control logic.
 
-Fourth, latency improves when deterministic code handles most of the pipeline. Code can screen every target quickly, while the model is reserved for the smaller subset of tasks that genuinely need interpretation.
+### Latency Implications
 
-Finally, using a narrow agent boundary shows architectural judgment. The point of the assignment is not to maximize agent usage. The point is to decide where agents are useful and where explicit logic is better.
+Deterministic screening runs quickly in code, while each model call adds network and inference latency. Reserving model calls for only the strategic-fit stage keeps the batch responsive and operationally predictable.
+
+### Error Propagation Risks
+
+In an all-agent design, the same model output would affect calculations, routing, and final status. In the current design, the agent can only influence the strategic-fit layer, while the underlying financial screen stays fixed.
+
+### Auditability and Compliance
+
+M&A workflows need defensible decisions. Deterministic formulas and thresholds provide repeatable outputs for identical inputs, which makes reject and advance decisions easier to explain than a fully model-driven workflow.
 
 ## 4. Estimated Token Calculation if All Tasks Were Agent-Based
 
@@ -137,11 +235,39 @@ If every target were sent to an agent for:
 
 then each target would require a larger prompt because the agent would need all company data plus instructions for the full workflow.
 
+Estimated reasoning steps in an all-agent design:
+
+1. Parse and validate the company packet
+2. Compute all financial metrics
+3. Evaluate each threshold and assign reason codes
+4. Decide pass, fail, or borderline routing
+5. Assess strategic fit against Salesforce themes
+6. Produce structured decision output
+7. Write final recommendation narrative
+
 Estimated tokens per target in an all-agent design:
 
-- Input company packet + full workflow instructions: **1,600 tokens**
-- Output with calculations, reason codes, and recommendation: **500 tokens**
+- System prompt with full workflow instructions: **~400 tokens**
+- Company packet with all normalized fields: **~350 tokens**
+- Financial formulas, threshold instructions, and reason-code logic: **~300 tokens**
+- Strategic-fit guidance and output format instructions: **~250 tokens**
+- JSON and schema overhead: **~300 tokens**
+- Total input: **~1,600 tokens**
+
+- Financial metrics and threshold results: **~150 tokens**
+- Reason codes and routing result: **~50 tokens**
+- Strategic-fit structured output: **~150 tokens**
+- Recommendation narrative: **~150 tokens**
+- Total output: **~500 tokens**
 - Total per target: **2,100 tokens**
+
+Assumptions:
+
+- Model: `gpt-5.4-nano`
+- 10 targets/day
+- no retries included
+- compact but structured JSON-style output
+- estimates are directional and intended to compare architectures rather than forecast billing exactly
 
 Estimated daily total:
 
@@ -173,9 +299,23 @@ Using the current real-company seeded batch as a concrete example:
 
 Estimated tokens per reviewed target:
 
-- Input packet with product summary, customer summary, selected metrics, caution codes, and Salesforce themes: **900 tokens**
-- Structured strategic-fit output: **350 tokens**
+- System prompt and strategic-fit instructions: **~220 tokens**
+- Company identity, product summary, and customer summary: **~180 tokens**
+- Deterministic summary block with selected metrics and caution codes: **~180 tokens**
+- Salesforce strategic themes and routing context: **~120 tokens**
+- JSON and schema overhead: **~200 tokens**
+- Total input: **~900 tokens**
+
+- Scores, theme labels, fit levels, and recommendation: **~120 tokens**
+- Rationale and major risks: **~180 tokens**
+- JSON overhead: **~50 tokens**
+- Total output: **~350 tokens**
 - Total per reviewed target: **1,250 tokens**
+
+Why these estimates are reasonable:
+
+- The **900 input tokens** are lower than the all-agent design because the model is not being asked to do calculations, threshold evaluation, or workflow control.
+- The **350 output tokens** are plausible because the agent returns a compact structured object, not a long-form memo.
 
 Estimated daily total for the actual design:
 
@@ -192,4 +332,13 @@ Comparison:
 - Reduction: **9,750 tokens/day**
 - Approximate reduction: **46.4%**
 
-The current seeded dataset is intentionally broad, so many companies still reach the agent. In a stricter or higher-volume production funnel, the savings from deterministic routing would likely be larger. Even in this class-sized version, the architecture reduces token use by limiting model calls to strategic interpretation instead of the full workflow.
+Scaling view:
+
+| Targets/day | Deterministic rejection rate | Agent calls/day | Total tokens/day | Estimated monthly total |
+| --- | --- | --- | --- | --- |
+| 10 | 10% | 9 | ~11,250 | ~337,500 |
+| 50 | 20% | 40 | ~50,000 | ~1,500,000 |
+| 100 | 30% | 70 | ~87,500 | ~2,625,000 |
+| 500 | 40% | 300 | ~375,000 | ~11,250,000 |
+
+The current seeded dataset is intentionally broad and strategy-friendly, so only 1 of 10 targets is rejected before the model. That makes the current demo funnel less efficient than a true production funnel. In a larger real screening workflow, the deterministic layer would likely reject a much higher share of targets, so the cost-saving advantage of the architecture would become even more meaningful.
