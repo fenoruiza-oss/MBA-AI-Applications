@@ -1,0 +1,15 @@
+export const reasonCodeDescriptions: Record<string, string> = {
+  REV_TOO_SMALL: "Revenue is below the minimum threshold for an actionable corporate development screen.",
+  GROWTH_TOO_LOW: "Revenue growth is below the minimum screening threshold.",
+  MARGIN_TOO_LOW: "Gross margin is too weak for the target software profile.",
+  BURN_TOO_HIGH: "Burn multiple is above the acceptable screening threshold.",
+  RETENTION_TOO_WEAK: "Net retention is below the minimum threshold.",
+  RUNWAY_TOO_SHORT: "Cash runway is too short for diligence readiness.",
+  LEVERAGE_TOO_HIGH: "Debt load is too high relative to revenue.",
+  DATA_INCOMPLETE: "Required screening data is incomplete.",
+  BORDERLINE_FINANCIAL_PROFILE: "Financial profile is borderline and should be interpreted with caution.",
+  NO_STRATEGIC_FIT: "Strategic adjacency to Salesforce is too weak.",
+  WEAK_SALESFORCE_CHANNEL_FIT: "Distribution fit with Salesforce go-to-market is weak.",
+  OVERLAP_TOO_DISTANT: "Product overlap is too distant from Salesforce's strategic themes.",
+  PRODUCT_SURFACE_WEAK: "The target does not clearly strengthen Salesforce's product surface.",
+};
