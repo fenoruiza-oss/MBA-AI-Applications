@@ -154,6 +154,8 @@ Targets -> Normalize -> Metrics -> Thresholds -> Router
 | Assess strategic adjacency to Salesforce | Agent-based | This requires semantic judgment across product descriptions and strategic themes. |
 | Evaluate product-surface synergy | Agent-based | This is qualitative interpretation, not arithmetic. |
 | Evaluate Salesforce distribution fit | Agent-based | This requires contextual reasoning about GTM alignment. |
+| Evaluate geographic expansion logic | Agent-based | This requires contextual interpretation of whether the target expands Salesforce into useful markets or strengthens regional coverage. |
+| Evaluate cultural and operational compatibility | Agent-based | This requires qualitative judgment about operating model fit, integration friction, and organizational adjacency. |
 | Identify narrative risks and strategic concerns | Agent-based | This is judgment-based and hard to encode as fixed rules. |
 | Map structured agent output into final strategic reason codes | Rule-based | The model should not directly control workflow state. |
 | Store decisions and reports in Supabase | Rule-based | Persistence is execution logic, not agent reasoning. |
@@ -189,6 +191,12 @@ This is agent-based because there is not a simple formula for whether a target s
 
 **Evaluate Salesforce distribution fit**
 This is agent-based because GTM fit depends on qualitative interpretation of sales motion, customer type, and adjacency to Salesforce channels. Deterministic keywords would be brittle and likely overfit to a narrow set of examples.
+
+**Evaluate geographic expansion logic**
+This is agent-based because geographic usefulness is not just a country field check. The model adds value by interpreting whether a company's footprint, customer base, or regional strength meaningfully expands Salesforce's market reach or strengthens an existing strategic motion.
+
+**Evaluate cultural and operational compatibility**
+This is agent-based because compatibility depends on qualitative factors such as operating style, product deployment model, enterprise motion, and likely integration friction. Deterministic logic could capture only crude proxies, while the agent can reason about compatibility from the structured company packet.
 
 **Identify narrative risks and strategic concerns**
 This is agent-based because risk identification is interpretive and contextual. The model adds value by surfacing plausible issues such as weak adjacency or integration complexity in a structured but non-formulaic way.
