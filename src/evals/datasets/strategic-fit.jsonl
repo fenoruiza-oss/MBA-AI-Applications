@@ -1,0 +1,2 @@
+{"input":{"industry_category":"ai_workflow","sales_motion":"enterprise","product_summary":"Workflow automation for enterprise support teams","customer_summary":"Large support organizations"},"expected":{"primary_theme":"ai_workflow","recommendation":"advance"}}
+{"input":{"industry_category":"other","sales_motion":"enterprise","product_summary":"Energy procurement optimization","customer_summary":"Procurement teams"},"expected":{"primary_theme":"none","recommendation":"reject"}}

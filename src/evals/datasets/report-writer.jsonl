@@ -1,0 +1,1 @@
+{"input":{"final_decision":"advance","final_reason_codes":[],"requires_sections":["Title","Company snapshot","Deterministic financial screen","Threshold result table","Strategic fit assessment","Final decision","Reason codes","Audit notes"]},"expected":{"contains_all_sections":true}}

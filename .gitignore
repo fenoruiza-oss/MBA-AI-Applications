@@ -1,0 +1,9 @@
+.next
+node_modules
+coverage
+*.log
+.env
+.env.local
+data/
+reports/screening/*.md
+tsconfig.tsbuildinfo
