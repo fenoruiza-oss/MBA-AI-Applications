@@ -1,4 +1,5 @@
 import type { CompanyRecord } from "@/ingest/types";
+import { normalizeTextForStorage } from "@/lib/text";
 
 type ExtractedPageSignals = {
   title: string | null;
@@ -12,12 +13,14 @@ function stripHtml(value: string): string {
 }
 
 function decodeHtml(value: string): string {
-  return value
+  return normalizeTextForStorage(
+    value
     .replace(/&amp;/g, "&")
     .replace(/&quot;/g, '"')
     .replace(/&#39;/g, "'")
     .replace(/&lt;/g, "<")
-    .replace(/&gt;/g, ">");
+    .replace(/&gt;/g, ">"),
+  );
 }
 
 function extractMetaContent(html: string, patterns: RegExp[]): string | null {

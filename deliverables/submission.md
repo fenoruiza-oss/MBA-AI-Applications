@@ -1,6 +1,11 @@
-# Submission
+﻿# Submission
 
 Repository: https://github.com/fenoruiza-oss/MBA-AI-Applications/tree/main/deliverables
+Live demo: https://mba-ai-applications.vercel.app/
+
+## Deployment
+
+The current assignment build is hosted on Vercel and uses Supabase for persistence. The deployed system runs the same deterministic screening pipeline described below, stores screening results in Supabase, and invokes the strategic-fit agent through the OpenAI API when quota is available. To keep the demo resilient, the deployment now falls back to the deterministic strategic-fit stub if the OpenAI call fails because of quota, rate limits, or another transient API error.
 
 ## 1. System Explanation
 
@@ -186,10 +191,10 @@ This is rule-based because routing is workflow control, not interpretation. Lett
 This is rule-based because the model should receive a controlled, minimal packet. Deterministic input construction prevents prompt sprawl and keeps the agent boundary narrow.
 
 **Assess strategic adjacency to Salesforce**
-This is agent-based because deterministic rules are insufficient to map open-ended product descriptions to Salesforce’s five strategic themes. Probabilistic reasoning adds value because the model can judge semantic similarity and strategic complementarity across free text.
+This is agent-based because deterministic rules are insufficient to map open-ended product descriptions to Salesforce's five strategic themes. Probabilistic reasoning adds value because the model can judge semantic similarity and strategic complementarity across free text.
 
 **Evaluate product-surface synergy**
-This is agent-based because there is not a simple formula for whether a target strengthens Salesforce’s AI product surface. The model can synthesize product summaries, buyer context, and platform fit in a way deterministic rules would struggle to generalize.
+This is agent-based because there is not a simple formula for whether a target strengthens Salesforce's AI product surface. The model can synthesize product summaries, buyer context, and platform fit in a way deterministic rules would struggle to generalize.
 
 **Evaluate Salesforce distribution fit**
 This is agent-based because GTM fit depends on qualitative interpretation of sales motion, customer type, and adjacency to Salesforce channels. Deterministic keywords would be brittle and likely overfit to a narrow set of examples.
@@ -352,3 +357,4 @@ Scaling view:
 | 500 | 40% | 300 | ~375,000 | ~11,250,000 |
 
 The current seeded dataset is intentionally broad and strategy-friendly, so only 1 of 10 targets is rejected before the model. That makes the current demo funnel less efficient than a true production funnel. In a larger real screening workflow, the deterministic layer would likely reject a much higher share of targets, so the cost-saving advantage of the architecture would become even more meaningful.
+
