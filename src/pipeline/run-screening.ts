@@ -1,5 +1,3 @@
-import { promises as fs } from "node:fs";
-import path from "node:path";
 import { assessStrategicFit } from "@/agents/strategic-fit";
 import { upsertTarget, insertScreeningRun, listScreeningRuns } from "@/db/queries";
 import { getEnrichmentMode, getSeedDatasetMode, getSeedTargets } from "@/ingest/datasets";
@@ -53,7 +51,7 @@ export async function runScreeningBatch(companies?: CompanyRecord[]): Promise<Sc
       : null;
     const decision = finalizeDecision(deterministic, strategic);
     const reportId = `${runDate}-${company.company_id}`;
-    const reportPath = path.join(process.cwd(), "reports", "screening", `${reportId}.md`);
+    const reportPath = `reports/screening/${reportId}.md`;
     const { report, markdown } = buildScreeningReport({
       report_id: reportId,
       run_date: runDate,
@@ -63,8 +61,6 @@ export async function runScreeningBatch(companies?: CompanyRecord[]): Promise<Sc
       final_decision: decision.final_decision,
       final_reason_codes: decision.final_reason_codes,
     });
-
-    await fs.writeFile(reportPath, markdown, "utf8");
 
     const result: ScreeningRunResult = {
       company,

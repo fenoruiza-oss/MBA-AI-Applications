@@ -77,15 +77,15 @@ export default async function HomePage() {
             <tbody>
               <tr>
                 <th>Data source</th>
-                <td>Hand-built sample target set</td>
+                <td>Real-company target set with curated financial assumptions and optional website enrichment</td>
               </tr>
               <tr>
                 <th>Storage</th>
-                <td>SQLite via sql.js</td>
+                <td>Supabase</td>
               </tr>
               <tr>
                 <th>Reports</th>
-                <td>Markdown artifacts in `reports/screening`</td>
+                <td>Structured report JSON plus Markdown stored in the database</td>
               </tr>
               <tr>
                 <th>Agent model</th>

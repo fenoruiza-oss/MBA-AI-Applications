@@ -1,4 +1,3 @@
-import { promises as fs } from "node:fs";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ensureSeededRuns } from "@/pipeline/run-screening";
@@ -14,8 +13,6 @@ export default async function TargetDetailPage({ params }: { params: Promise<{ i
   if (!run) {
     notFound();
   }
-
-  const markdown = await fs.readFile(run.report_path, "utf8");
 
   return (
     <main className="shell">
@@ -90,7 +87,7 @@ export default async function TargetDetailPage({ params }: { params: Promise<{ i
 
         <div className="panel">
           <h2>Markdown report</h2>
-          <div className="markdown">{markdown}</div>
+          <div className="markdown">{run.report_markdown}</div>
         </div>
       </section>
     </main>

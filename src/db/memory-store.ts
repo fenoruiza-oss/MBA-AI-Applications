@@ -8,6 +8,7 @@ type StoredRun = {
   run_date: string;
   final_decision: "advance" | "reject";
   report_path: string;
+  report_markdown: string;
   final_reason_codes: string[];
   report: ScreeningRunResult["report"];
   company: CompanyRecord;
@@ -30,6 +31,7 @@ export function insertMemoryRun(result: ScreeningRunResult) {
     run_date: result.run_date,
     final_decision: result.final_decision,
     report_path: result.report_path,
+    report_markdown: result.report_markdown,
     final_reason_codes: result.final_reason_codes,
     report: result.report,
     company: result.company,

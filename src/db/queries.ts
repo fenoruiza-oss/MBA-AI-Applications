@@ -16,6 +16,7 @@ type SupabaseRunRow = {
   run_date: string;
   final_decision: "advance" | "reject";
   report_path: string;
+  report_markdown: string;
   deterministic_json: ScreeningRunResult["deterministic"];
   strategic_json: ScreeningRunResult["strategic"];
   final_reason_codes_json: string[];
@@ -68,6 +69,7 @@ export async function insertScreeningRun(result: ScreeningRunResult) {
       run_date: result.run_date,
       final_decision: result.final_decision,
       report_path: result.report_path,
+      report_markdown: result.report_markdown,
       deterministic_json: result.deterministic,
       strategic_json: result.strategic,
       final_reason_codes_json: result.final_reason_codes,
@@ -92,7 +94,7 @@ export async function listScreeningRuns() {
     supabase
       .from("screening_runs")
       .select(
-        "report_id, company_id, run_date, final_decision, report_path, deterministic_json, strategic_json, final_reason_codes_json, report_json",
+        "report_id, company_id, run_date, final_decision, report_path, report_markdown, deterministic_json, strategic_json, final_reason_codes_json, report_json",
       )
       .order("run_date", { ascending: false }),
   ]);
@@ -108,6 +110,7 @@ export async function listScreeningRuns() {
     run_date: run.run_date,
     final_decision: run.final_decision,
     report_path: run.report_path,
+    report_markdown: run.report_markdown,
     final_reason_codes: run.final_reason_codes_json,
     report: run.report_json,
   }));
@@ -124,7 +127,7 @@ export async function getScreeningRun(companyId: string) {
     supabase
       .from("screening_runs")
       .select(
-        "report_id, company_id, run_date, final_decision, report_path, deterministic_json, strategic_json, final_reason_codes_json, report_json",
+        "report_id, company_id, run_date, final_decision, report_path, report_markdown, deterministic_json, strategic_json, final_reason_codes_json, report_json",
       )
       .eq("company_id", companyId)
       .order("run_date", { ascending: false })
@@ -149,6 +152,7 @@ export async function getScreeningRun(companyId: string) {
     run_date: run.run_date,
     final_decision: run.final_decision,
     report_path: run.report_path,
+    report_markdown: run.report_markdown,
     final_reason_codes: run.final_reason_codes_json,
     report: run.report_json,
     company: target.payload_json,
