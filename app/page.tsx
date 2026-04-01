@@ -43,7 +43,7 @@ export default async function HomePage() {
         <div className="hero-copy panel panel-hero">
           <span className="eyebrow">Salesforce Corporate Development</span>
           <p className="hero-overline">Editorial Screening Ledger</p>
-          <h1>M&A screening with boardroom discipline and narrow-model judgment.</h1>
+          <h1>Disciplined M&A screening for Salesforce.</h1>
           <p className="hero-summary">
             Financial screening stays deterministic. Only targets that clear the first gate reach a strategic-fit
             agent, and every disposition is stored with inspectable reason codes, report output, and audit context.
