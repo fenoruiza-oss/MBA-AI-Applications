@@ -1,5 +1,7 @@
 # Submission
 
+Repository: https://github.com/fenoruiza-oss/MBA-AI-Applications/tree/main/deliverables
+
 ## 1. System Explanation
 
 This system is an M&A screening and judgment workflow for Salesforce Corporate Development. Its purpose is to evaluate acquisition targets while keeping financial screening deterministic and using an agent only for strategic interpretation.
