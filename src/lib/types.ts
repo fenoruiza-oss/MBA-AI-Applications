@@ -63,6 +63,7 @@ export type DeterministicSummary = {
 export type StrategicFitInput = {
   company_id: string;
   company_name: string;
+  headquarters: string | null;
   product_summary: string;
   customer_summary: string;
   industry_category: CompanyRecord["industry_category"];

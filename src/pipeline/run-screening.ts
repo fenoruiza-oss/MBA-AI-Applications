@@ -13,6 +13,7 @@ export async function buildStrategicInput(company: CompanyRecord, deterministic 
   return {
     company_id: company.company_id,
     company_name: company.company_name,
+    headquarters: company.headquarters,
     product_summary: company.product_summary,
     customer_summary: company.customer_summary,
     industry_category: company.industry_category,

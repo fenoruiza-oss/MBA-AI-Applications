@@ -200,10 +200,10 @@ This is agent-based because there is not a simple formula for whether a target s
 This is agent-based because GTM fit depends on qualitative interpretation of sales motion, customer type, and adjacency to Salesforce channels. Deterministic keywords would be brittle and likely overfit to a narrow set of examples.
 
 **Evaluate geographic expansion logic**
-This is agent-based because geographic usefulness is not just a country field check. The model adds value by interpreting whether a company's footprint, customer base, or regional strength meaningfully expands Salesforce's market reach or strengthens an existing strategic motion.
+This is agent-based because geographic usefulness is not just a country field check. The model adds value by interpreting whether a company's footprint, customer base, or regional strength meaningfully expands Salesforce's market reach or strengthens an existing strategic motion. In the current implementation, this signal is passed through the `headquarters` field and is expected to surface through `fit_rationale` and `major_risks` rather than through a dedicated structured geography score, because the assignment dataset provides only light geographic evidence.
 
 **Evaluate cultural and operational compatibility**
-This is agent-based because compatibility depends on qualitative factors such as operating style, product deployment model, enterprise motion, and likely integration friction. Deterministic logic could capture only crude proxies, while the agent can reason about compatibility from the structured company packet.
+This is agent-based because compatibility depends on qualitative factors such as operating style, product deployment model, enterprise motion, and likely integration friction. Deterministic logic could capture only crude proxies, while the agent can reason about compatibility from the structured company packet. In the current implementation, these considerations are captured through `fit_rationale` and `major_risks` rather than as dedicated schema fields, which is intentional because the available input signals are suggestive rather than rich enough to justify a separate scored dimension.
 
 **Identify narrative risks and strategic concerns**
 This is agent-based because risk identification is interpretive and contextual. The model adds value by surfacing plausible issues such as weak adjacency or integration complexity in a structured but non-formulaic way.
@@ -234,7 +234,7 @@ In an all-agent design, the same model output would affect calculations, routing
 
 ### Auditability and Compliance
 
-M&A workflows need defensible decisions. Deterministic formulas and thresholds provide repeatable outputs for identical inputs, which makes reject and advance decisions easier to explain than a fully model-driven workflow.
+M&A workflows need defensible decisions. Deterministic formulas and thresholds provide repeatable outputs for identical inputs, which makes reject and advance decisions easier to explain than a fully model-driven workflow. For a public company such as Salesforce, acquisition analysis also sits in a compliance-sensitive environment shaped by finance, legal, board, and internal-control review. A deterministic screening layer creates a clearer paper trail for why a target was rejected or advanced, which is easier to document and defend than a model-only process with changing intermediate reasoning.
 
 ## 4. Estimated Token Calculation if All Tasks Were Agent-Based
 
@@ -357,4 +357,6 @@ Scaling view:
 | 500 | 40% | 300 | ~375,000 | ~11,250,000 |
 
 The current seeded dataset is intentionally broad and strategy-friendly, so only 1 of 10 targets is rejected before the model. That makes the current demo funnel less efficient than a true production funnel. In a larger real screening workflow, the deterministic layer would likely reject a much higher share of targets, so the cost-saving advantage of the architecture would become even more meaningful.
+
+
 
