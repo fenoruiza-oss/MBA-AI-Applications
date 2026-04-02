@@ -11,6 +11,19 @@ The current assignment build is hosted on Vercel and uses Supabase for persisten
 
 This system is an M&A screening and judgment workflow for Salesforce Corporate Development. Its purpose is to evaluate acquisition targets while keeping financial screening deterministic and using an agent only for strategic interpretation.
 
+Controller / orchestration policy:
+
+- The controller executes the workflow in a fixed order: ingest, normalize, compute metrics, apply thresholds, route, invoke the strategic-fit agent only for deterministic passes, generate reports, and persist results.
+- If normalization fails schema validation, the system stops processing that company, records a normalization failure, and does not continue to metrics or the agent.
+- If live enrichment fails, the system continues with the last available deterministic record, marks the enrichment step as incomplete, and carries a data-quality flag into the report.
+- If the strategic-fit agent returns invalid JSON, the controller retries up to two times. If the response is still invalid, or if the OpenAI API times out, hits quota, or rate limits, the system falls back to the deterministic strategic-fit stub used in the deployment.
+- If Supabase persistence fails, the screening decision is still written to the Markdown report, the run is marked for replay, and the company is not silently dropped from the workflow.
+- In short, the system stops when a core deterministic input is invalid, but it continues with explicit flags when enrichment, agent interpretation, or persistence experience transient failures.
+
+Operational note:
+
+- A 10-company batch is expected to complete in a few minutes under normal conditions. Agent retries are capped at two attempts, fallback to the deterministic strategic-fit stub is automatic, and generated reports are intended for internal Salesforce Corporate Development use rather than broad external distribution.
+
 The end-to-end workflow is:
 
 1. **Ingest target companies**
@@ -27,6 +40,7 @@ The end-to-end workflow is:
      - `annual_revenue_usd`, `revenue_growth_yoy_pct`, `gross_margin_pct`, `burn_multiple`, `net_retention_pct`, `cash_months_remaining`, `debt_to_revenue_ratio`
      - provenance fields such as `source_financials`, `source_product`, `financial_as_of`, and `financial_provenance`
      - `data_quality_flags`
+   - The normalized packet also preserves source URLs and as-of dates for financial and product fields, so each downstream screen can be traced back to the public source packet used for that run.
    - This step is schema-validated and deterministic.
 
 3. **Compute financial metrics deterministically**
@@ -88,15 +102,25 @@ The end-to-end workflow is:
      - selected deterministic metrics
      - caution codes
      - Salesforce strategic themes
+   - The agent evaluates a small set of named strategic dimensions separately before making a final recommendation:
+     - product adjacency
+     - Salesforce distribution fit
+     - geographic expansion logic
+     - cultural / operational compatibility
+     - integration complexity
+   - This makes the strategic-fit step a light factor model rather than a single heuristic judgment: the agent reviews each dimension explicitly, then summarizes the result in a compact structured output.
    - The agent does **not** calculate metrics, apply thresholds, or write to the database.
    - The agent returns structured output containing:
      - `strategic_fit_score`
+     - `confidence`
      - `primary_theme`
      - `distribution_fit`
      - `product_surface_synergy`
+     - `fit_rationale`
      - `integration_complexity`
      - `major_risks`
      - `recommendation`
+   - `confidence` is a simple bounded signal showing how strongly the agent believes the available evidence supports its recommendation, given the structured packet and cited public-source context. Geographic and cultural findings stay compact by being summarized in `fit_rationale` and `major_risks` rather than expanded into a separate memo.
 
 7. **Make the final decision deterministically**
    - Final workflow control is still deterministic.
@@ -136,6 +160,11 @@ The end-to-end workflow is:
    - Rejected and advanced companies are both stored with their structured results and report paths.
 
 This architecture keeps the system inspectable: calculations, thresholds, routing, and final workflow state are deterministic, while the agent handles only strategic interpretation.
+
+Operational health checks:
+
+- The system tracks schema-validation success rate, the percentage of records with incomplete required fields, the percentage of runs that require agent fallback, and the percentage of persistence attempts that fail.
+- These signals make failure detection measurable and help contain issues before a screening batch is treated as decision-ready.
 
 Simple pipeline view:
 
